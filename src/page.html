@@ -4,136 +4,297 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jev Calls the Play</title>
-<meta name="description" content="Before every NFL snap, a decision-only AI model calls run or pass and, on fourth down, go, punt or kick. Graded live against what the coach did.">
+<meta name="description" content="Before each NFL snap, a decision-only AI model calls run or pass and, on fourth down, go, punt or kick. Graded live against what the coach did.">
+<meta name="theme-color" content="#0a0d0b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0b0f14; --panel:#121923; --line:#1f2a37; --text:#e6edf3; --muted:#8b98a8; --accent:#5ee3a1; --bad:#ff6b6b; --warn:#ffd166; --jev:#7cc4ff; --coach:#c9b3ff; }
-  * { box-sizing:border-box }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  a { color:var(--jev) }
-  .wrap { max-width:1100px; margin:0 auto; padding:20px 16px 60px }
-  header h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.02em }
-  header p { margin:0; color:var(--muted); max-width:760px }
-  .live { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#16351f; color:var(--accent); margin-left:8px; vertical-align:middle }
-  .live.off { background:#2a2f38; color:var(--muted) }
-  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin:18px 0 }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px }
-  .card h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted) }
-  .big { font-size:30px; font-weight:700; letter-spacing:-.02em }
-  .row { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px solid var(--line) }
-  .row:first-of-type { border-top:0 }
-  .row b { font-variant-numeric:tabular-nums }
-  .jev { color:var(--jev) } .coach { color:var(--coach) } .good { color:var(--accent) } .bad { color:var(--bad) } .muted { color:var(--muted) }
-  h2 { font-size:18px; margin:26px 0 10px }
-  .games { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:12px }
-  .game { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px }
-  .game .hd { display:flex; justify-content:space-between; align-items:baseline; gap:8px }
-  .game .hd .score { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums }
-  .next { margin:10px 0; padding:10px 12px; border-radius:10px; background:#0e1a2a; border:1px solid #1d3350 }
-  .next .sit { font-weight:600 }
-  .next .call { font-size:20px; font-weight:700; margin-top:2px }
-  .bar { height:6px; background:#1f2a37; border-radius:3px; overflow:hidden; margin-top:6px }
-  .bar i { display:block; height:100%; background:var(--jev) }
-  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px }
-  td, th { padding:4px 6px; border-top:1px solid var(--line); text-align:left; vertical-align:top }
-  th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.06em; border-top:0 }
-  td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
-  .tick { font-weight:700 }
-  footer { margin-top:36px; color:var(--muted); font-size:13px }
-  footer p { margin:6px 0 }
-  .empty { color:var(--muted); padding:30px; text-align:center; border:1px dashed var(--line); border-radius:12px }
-  @media (max-width:600px){ .big{font-size:24px} header h1{font-size:22px} }
+  :root {
+    --field: #0a0d0b; --turf: #101a13; --turf-2: #0d1510; --chalk: #f2f4ee; --chalk-dim: #b9c1b4; --chalk-mute: #8a9587;
+    --line: #223028; --line-2: #2e4034;
+    --yellow: #f5d90a; --yellow-ink: #1a1500; --jev: var(--yellow);
+    --coach: #f2f4ee; --good: #7ee787; --bad: #ff7b72; --warn: #ffb648;
+    --run: #ff9c4a; --pass: #6bb6ff;
+    --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif; --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+    --ease: cubic-bezier(.16, 1, .3, 1);
+  }
+  * { box-sizing: border-box }
+  html { background: var(--field); color-scheme: dark }
+  body { margin: 0; background: radial-gradient(1200px 500px at 50% -120px, #16261b 0%, var(--field) 60%); color: var(--chalk); font: 16px/1.5 var(--body); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--yellow); color: var(--yellow-ink) }
+  :focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; border-radius: 3px }
+  ::-webkit-scrollbar { width: 12px; height: 12px } ::-webkit-scrollbar-track { background: var(--field) } ::-webkit-scrollbar-thumb { background: var(--line-2); border: 3px solid var(--field); border-radius: 8px }
+  a { color: var(--chalk); text-decoration-color: var(--chalk-mute); text-underline-offset: 3px } a:hover { text-decoration-color: var(--yellow) }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 20px 72px }
+  .display { font-family: var(--display); letter-spacing: -.01em; line-height: .95; text-transform: uppercase }
+  .num { font-family: var(--display); font-variant-numeric: tabular-nums; letter-spacing: -.01em }
+  .muted { color: var(--chalk-mute) } .dim { color: var(--chalk-dim) }
+  .jev { color: var(--jev) } .good { color: var(--good) } .bad { color: var(--bad) }
+
+  /* masthead */
+  .mast { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 2px solid var(--line-2) }
+  .mast h1 { margin: 0; font-size: clamp(44px, 7vw, 76px); font-weight: 800; line-height: .9 }
+  .mast h1 em { font-style: normal; color: var(--yellow) }
+  .mast p { margin: 10px 0 0; max-width: 62ch; color: var(--chalk-dim); font-size: 16px }
+  .status { display: flex; align-items: center; gap: 10px; font-family: var(--display); text-transform: uppercase; font-size: 15px; letter-spacing: .06em; padding-bottom: 6px }
+  .status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--chalk-mute); box-shadow: 0 0 0 0 rgba(126,231,135,0) }
+  .status.on .dot { background: var(--good); animation: pulse 2.2s infinite }
+  .status.stale .dot { background: var(--warn) }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(126,231,135,.55) } 70% { box-shadow: 0 0 0 10px rgba(126,231,135,0) } 100% { box-shadow: 0 0 0 0 rgba(126,231,135,0) } }
+
+  /* scorebug */
+  .bug { margin: 22px 0 0; display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); background: var(--turf); border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; box-shadow: 0 18px 40px -24px rgba(0,0,0,.9) }
+  .bug > div { padding: 14px 18px; border-left: 1px solid var(--line) }
+  .bug > div:first-child { border-left: 0 }
+  .bug .lbl { font-family: var(--display); text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--chalk-mute); margin-bottom: 6px }
+  .bug .head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px }
+  .bug .head .big { font-size: 46px; font-weight: 800; line-height: 1 }
+  .bug .head .sub { color: var(--chalk-dim); font-size: 14px; padding-bottom: 6px; text-align: right }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end }
+  .vs .side .who { font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; color: var(--chalk-mute) }
+  .vs .side .val { font-size: 40px; font-weight: 800; line-height: 1 }
+  .vs .side.j .who { color: var(--yellow) }
+  .vs .side.j .val { color: var(--yellow) }
+  .bug .foot { margin-top: 6px; font-size: 13px; color: var(--chalk-mute) }
+  .bug .foot b { color: var(--chalk-dim); font-weight: 500 }
+
+  /* featured call */
+  .feat { margin: 28px 0 0; position: relative; border: 1px solid var(--line-2); border-radius: 12px; background: linear-gradient(180deg, #121d16, var(--turf-2)); box-shadow: 0 30px 60px -30px rgba(0,0,0,.95); overflow: hidden }
+  .feat .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px 0; flex-wrap: wrap }
+  .feat .tag { font-family: var(--display); text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: var(--yellow) }
+  .feat .game { font-family: var(--display); text-transform: uppercase; font-size: 15px; color: var(--chalk-dim); letter-spacing: .04em }
+  .feat .body { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; padding: 10px 20px 20px; align-items: center }
+  .feat .sit { font-size: 18px; color: var(--chalk-dim) } .feat .sit b { color: var(--chalk); font-weight: 600 }
+  .feat .call { margin-top: 6px; font-size: clamp(64px, 9vw, 120px); font-weight: 800; line-height: .9; color: var(--yellow); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap }
+  .feat .call small { font-size: .32em; color: var(--chalk-dim); font-weight: 600; letter-spacing: .02em }
+  .feat .call.flip { animation: flip .55s var(--ease) }
+  @keyframes flip { from { transform: translateY(14px); opacity: 0; filter: blur(6px) } to { transform: none; opacity: 1; filter: none } }
+  .feat .odds { margin-top: 12px; display: grid; gap: 8px; max-width: 460px }
+  .odds .row { display: grid; grid-template-columns: 120px 1fr 52px; align-items: center; gap: 12px; font-size: 14px; color: var(--chalk-dim) }
+  .odds .bar { height: 8px; background: #1a261f; border-radius: 4px; overflow: hidden; position: relative }
+  .odds .bar i { position: absolute; inset: 0; background: var(--yellow); border-radius: 4px; transform-origin: left; transition: transform .6s var(--ease) }
+  .odds .bar i.coach { background: var(--chalk-dim) }
+  .odds .bar .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--chalk); left: 50%; opacity: .55 }
+  .odds .v { text-align: right; color: var(--chalk); font-family: var(--display); font-size: 18px; font-weight: 700 }
+
+  /* field */
+  .field { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line-2) }
+  .field .ez { fill: #16281c } .field .grass { fill: #0f1a13 } .field .yard { stroke: #2b3f31; stroke-width: 1 } .field .yard.five { stroke: #3a5442 } .field .hash { stroke: #2b3f31; stroke-width: 1 }
+  .field .num { fill: #5c7864; font: 700 9px var(--display) }
+  .field .los { stroke: var(--pass); stroke-width: 2.5 } .field .fdl { stroke: var(--yellow); stroke-width: 2.5 }
+  .field .ball { fill: #c98b4a; stroke: #f2f4ee; stroke-width: .8 } .field .ball-l { stroke: #f2f4ee; stroke-width: .7 }
+  .field .arrow { fill: var(--chalk-dim) }
+  .field .los-g, .field .fdl-g, .field .ballg { transition: transform .8s var(--ease) }
+  .field .ezt { fill: #5c7864; font: 800 11px var(--display); letter-spacing: .08em }
+  .field .ezt.off { fill: var(--yellow); opacity: .9 }
+  .fieldcap { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; color: var(--chalk-mute) }
+  .fieldcap .k { display: inline-flex; align-items: center; gap: 6px } .fieldcap .k i { width: 14px; height: 3px; display: inline-block; border-radius: 2px }
+
+  /* games */
+  h2 { font-family: var(--display); text-transform: uppercase; letter-spacing: .02em; font-size: 30px; font-weight: 800; margin: 40px 0 12px; display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap }
+  h2 small { font: 500 14px var(--body); text-transform: none; letter-spacing: 0; color: var(--chalk-mute) }
+  .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px }
+  .g { background: var(--turf); border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 16px 34px -26px rgba(0,0,0,.9) }
+  .g.live { border-color: #3a5442 }
+  .g .hd { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px }
+  .g .teams { display: flex; gap: 14px; align-items: baseline }
+  .g .team { font-family: var(--display); text-transform: uppercase; font-size: 22px; font-weight: 700 } .g .team.off::after { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); margin-left: 7px; vertical-align: middle }
+  .g .team .s { font-weight: 800; margin-left: 6px; color: var(--chalk) }
+  .g .clock { font-family: var(--display); text-transform: uppercase; font-size: 14px; color: var(--chalk-mute); letter-spacing: .06em; text-align: right }
+  .g .clock.on { color: var(--good) }
+  .g .next { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 8px 0 2px; border-top: 1px solid var(--line) }
+  .g .next .sit { font-size: 14px; color: var(--chalk-dim) } .g .next .sit b { color: var(--chalk) }
+  .g .next .c { font-family: var(--display); text-transform: uppercase; font-size: 30px; font-weight: 800; color: var(--yellow); line-height: 1 } .g .next .c small { font-size: 14px; color: var(--chalk-dim); font-weight: 600; margin-left: 6px }
+  .strip { display: flex; gap: 3px; flex-wrap: wrap; align-items: center }
+  .strip .t { width: 18px; height: 22px; border-radius: 3px; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 12px; background: #1a261f; color: var(--chalk-mute) }
+  .strip .t.y { background: #1f3a26; color: var(--good) } .strip .t.n { background: #3a1f1f; color: var(--bad) } .strip .t.v { color: #6a7a70; background: #141d17 } .strip .t.f { outline: 1px solid var(--yellow) }
+  .strip .lbl { font-family: var(--display); text-transform: uppercase; font-size: 12px; letter-spacing: .06em; color: var(--chalk-mute); margin-right: 6px }
+  .g .tot { display: flex; gap: 16px; font-size: 13px; color: var(--chalk-mute); flex-wrap: wrap } .g .tot b { color: var(--chalk-dim); font-weight: 500 }
+  details.log summary { cursor: pointer; font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; font-size: 13px; color: var(--chalk-mute); list-style: none; display: flex; align-items: center; gap: 6px } details.log summary::-webkit-details-marker { display: none }
+  details.log summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--chalk-mute); border-bottom: 2px solid var(--chalk-mute); transform: rotate(-45deg) translateY(1px); transition: transform .2s var(--ease); margin-right: 2px } details.log[open] summary::before { transform: rotate(45deg) translateY(-2px) }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px }
+  td, th { padding: 5px 6px; border-top: 1px solid var(--line); text-align: left; vertical-align: top }
+  th { color: var(--chalk-mute); font: 600 11px var(--display); text-transform: uppercase; letter-spacing: .08em; border-top: 0 }
+  td.n { white-space: nowrap; font-family: var(--display); font-size: 14px; font-weight: 600 }
+  td.play { color: var(--chalk-mute) }
+  .call-pass { color: var(--pass) } .call-run { color: var(--run) }
+
+  /* fourth-down reel */
+  .reel { display: grid; gap: 8px }
+  .fd { display: grid; grid-template-columns: 150px 1fr auto auto auto; gap: 14px; align-items: center; background: var(--turf); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px }
+  .fd .who { font-family: var(--display); text-transform: uppercase; font-size: 16px; font-weight: 700 } .fd .who small { display: block; font: 500 12px var(--body); text-transform: none; color: var(--chalk-mute) }
+  .fd .sit { font-size: 14px; color: var(--chalk-dim) } .fd .sit b { color: var(--chalk) }
+  .fd .pick { text-align: center; min-width: 74px } .fd .pick .k { font-family: var(--display); text-transform: uppercase; font-size: 11px; letter-spacing: .08em; color: var(--chalk-mute) } .fd .pick .v { font-family: var(--display); font-size: 24px; font-weight: 800; line-height: 1 } .fd .pick .p { font-size: 12px; color: var(--chalk-mute) }
+  .fd .pick.j .v { color: var(--yellow) }
+  .fd .out { font-family: var(--display); text-transform: uppercase; font-size: 13px; letter-spacing: .06em; padding: 4px 8px; border-radius: 4px; background: #1a261f; color: var(--chalk-dim) } .fd .out.y { background: #1f3a26; color: var(--good) } .fd .out.n { background: #3a1f1f; color: var(--bad) }
+  .fd.agree { border-color: #3a5442 } .fd.go { border-color: #5d5310 }
+
+  .empty { padding: 34px 20px; text-align: center; color: var(--chalk-dim); border: 1px dashed var(--line-2); border-radius: 12px; font-size: 16px }
+  .empty b { font-family: var(--display); text-transform: uppercase; font-size: 24px; color: var(--chalk); display: block; margin-bottom: 4px }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-2); color: var(--chalk-mute); font-size: 14px; max-width: 78ch }
+  footer p { margin: 0 0 10px } footer b { color: var(--chalk-dim) } footer code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--chalk-dim) }
+
+  @media (max-width: 900px) { .bug { grid-template-columns: 1fr 1fr } .bug > div:nth-child(3) { border-left: 0 } .bug > div:nth-child(n+3) { border-top: 1px solid var(--line) } .feat .body { grid-template-columns: 1fr } }
+  @media (max-width: 640px) {
+    .wrap { padding: 16px 16px 56px } .bug { grid-template-columns: 1fr } .bug > div { border-left: 0 } .bug > div + div { border-top: 1px solid var(--line) }
+    .games { grid-template-columns: 1fr } .fd { grid-template-columns: 1fr 1fr 1fr; row-gap: 8px } .fd .who { grid-column: 1 / -1 } .fd .sit { grid-column: 1 / -1 }
+    .feat .call { font-size: 64px } .feat .top { padding: 12px 14px 0 } .feat .body { padding: 8px 14px 14px } h2 { font-size: 26px }
+  }
+  @media (prefers-reduced-motion: reduce) { .feat .call.flip, .status.on .dot { animation: none } .field .los-g, .field .fdl-g, .field .ballg, .odds .bar i { transition: none } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>Jev Calls the Play <span id="live" class="live off">connecting</span> <span id="hb" class="live off" style="display:none"></span></h1>
-    <p>Before every NFL snap, <a href="https://typesafe.ai" rel="noopener">Jev</a>, a decision-only AI model that cannot write text, calls <b>run or pass</b> and, on fourth down, <b>go, punt or kick</b>. Each call is made from the latest play visible in the feed, timestamped before the poller sees the outcome, and graded against what actually happened. The baseline is a plain league-tendency table (what coaches usually do in that situation), built from earlier weeks.</p>
+  <header class="mast">
+    <div>
+      <h1 class="display">Jev calls <em>the play</em></h1>
+      <p>Before each snap, <a href="https://typesafe.ai" rel="noopener">Jev</a>, a decision-only AI model that cannot write text, calls <b>run or pass</b> and, on fourth down, <b>go, punt or kick</b>. Each call is made from the latest play visible in the feed, timestamped before the poller sees the outcome, and graded against what actually happened. The opponent is a plain league-tendency table: what coaches usually do in that spot.</p>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="status-t">connecting</span></div>
   </header>
 
-  <div class="cards" id="cards"></div>
+  <section class="bug" id="bug" aria-label="Scoreboard"></section>
 
-  <h2>Games</h2>
-  <div class="games" id="games"><div class="empty">Waiting for the first snap.</div></div>
+  <section class="feat" id="feat" hidden aria-live="polite"></section>
 
-  <h2>Fourth-down ledger</h2>
-  <div class="card"><table id="fourth"><thead><tr><th>Game</th><th>Situation</th><th>Jev</th><th>Tendency</th><th>Coach did</th><th>Result</th></tr></thead><tbody></tbody></table></div>
+  <h2 id="games-h">Games <small id="games-sub"></small></h2>
+  <div class="games" id="games"><div class="empty"><b>Waiting for kickoff</b>Calls start with the first snap of the day.</div></div>
+
+  <h2>Fourth-down reel <small>every fourth-down call, newest first</small></h2>
+  <div class="reel" id="reel"><div class="empty">No fourth downs yet.</div></div>
 
   <footer>
-    <p><b>Method.</b> Play-by-play comes from ESPN's public feed, polled every ten seconds, which runs some seconds behind the stadium, so a call is made from the latest play the poller has seen, before it sees the outcome, and not always before the real snap. When several plays arrive in one poll only the first is graded and the rest are counted as missed. After each play, the code builds the pre-snap situation for the next play (down, distance, field position, score, clock, last three plays, plus league tendency rates for that situation) and asks Jev three typed questions: pass or run, go/punt/kick on fourth down, and the probability of a first down or touchdown. Model pinned to <code>jev-1.13.0</code>. If a penalty or timeout changes the situation before the snap, the call is voided, not regraded. Scrambles and sacks count as pass plays.</p>
-    <p><b>Baseline.</b> Smoothed bucket tables from ESPN play-by-play of the prior weeks: pass rate by down, distance, field position and game situation; fourth-down choice rates by distance and field position. Jev is shown those same rates as part of its input, so the comparison is "tendencies alone" versus "tendencies plus judgment".</p>
-    <p><b>Backtest before launch</b> (four held-out games, 540 plays, 37 fourth downs): run/pass accuracy tendency 65.0%, Jev 64.6%, always-pass 60.4%. Fourth-down accuracy tendency 62.2%, Jev 64.9%, always-punt 51.4%. Expect Jev to roughly match the tendency table on run/pass and to be more willing than coaches to go for it.</p>
-    <p><a href="/api/ledger.csv">Download the full ledger (CSV)</a> · <a href="/api/state">JSON</a> · Built by <a href="https://gregjones.io" rel="noopener">Greg Jones</a>. No wagering, no affiliation with the NFL, ESPN or TypeSafe.</p>
+    <p><b>How it works.</b> Play-by-play comes from ESPN's public feed, polled every ten seconds. The feed runs some seconds behind the stadium, so a call is made from the latest play the poller has seen, before it sees the outcome, and not always before the real snap. When several plays arrive in one poll only the first is graded and the rest are counted as missed. After each play the code builds the pre-snap situation for the next play (down, distance, field position, score, clock, last three plays, plus league tendency rates for that situation) and asks Jev three typed questions: pass or run, go/punt/kick on fourth down, and the probability of a first down or touchdown. Model pinned to <code>jev-1.13.0</code>. If a penalty or timeout changes the situation before the snap the call is voided, not regraded. Scrambles and sacks count as pass plays.</p>
+    <p><b>The tendency table.</b> Smoothed bucket tables from ESPN play-by-play of the prior weeks: pass rate by down, distance, field position and game situation; fourth-down choice rates by distance and field position. Jev sees those same rates as part of its input, so the contest is "tendencies alone" against "tendencies plus judgment".</p>
+    <p><b>Backtest before launch</b> (four held-out games, 540 plays, 37 fourth downs): run/pass accuracy tendency 65.0%, Jev 64.6%, always-pass 60.4%. Fourth-down accuracy tendency 62.2%, Jev 64.9%, always-punt 51.4%. Expect Jev to roughly match the table on run/pass and to be more willing than coaches to go for it.</p>
+    <p><a href="/api/ledger.csv">Download the full ledger (CSV)</a> · <a href="/api/state">JSON</a> · <a href="https://github.com/gregjonesio/jev-nfl" rel="noopener">Source</a> · Built by <a href="https://gregjones.io" rel="noopener">Greg Jones</a>. No wagering. Not affiliated with the NFL, ESPN or TypeSafe.</p>
   </footer>
 </div>
+
 <script>
 const $ = s => document.querySelector(s);
 const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '–';
-const f2 = x => x == null ? '–' : (Math.round(x * 100) + '%');
+const f2 = x => x == null ? '–' : Math.round(x * 100) + '%';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const lbl = { go_for_it: 'GO', punt: 'PUNT', field_goal: 'FG', pass: 'PASS', run: 'RUN' };
-const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const topOf = j => { try { const o = JSON.parse(j); return Object.entries(o).sort((a, b) => b[1] - a[1])[0]; } catch { return null; } };
-let d_missed = 0;
-function cards(t) {
+const ord = ['', '1st', '2nd', '3rd', '4th'];
+const topOf = j => { try { const o = typeof j === 'string' ? JSON.parse(j) : j; return Object.entries(o).sort((a, b) => b[1] - a[1])[0]; } catch { return null; } };
+const callOf = r => r.down === 4 && r.jev_fourth ? { k: r.jev_fourth, t: lbl[r.jev_fourth], p: topOf(r.jev_fourth_probs)?.[1] } : { k: r.p_pass >= 0.5 ? 'pass' : 'run', t: r.p_pass >= 0.5 ? 'PASS' : 'RUN', p: r.p_pass >= 0.5 ? r.p_pass : 1 - r.p_pass };
+const baseOf = r => r.down === 4 && r.base_fourth ? (t => ({ t: lbl[t?.[0]], p: t?.[1] }))(topOf(r.base_fourth)) : { t: r.base_p_pass >= 0.5 ? 'PASS' : 'RUN', p: r.base_p_pass >= 0.5 ? r.base_p_pass : 1 - r.base_p_pass };
+const actualOf = r => r.status === 'voided' ? null : (r.down === 4 && r.actual_fourth ? lbl[r.actual_fourth] : lbl[r.actual_play] || null);
+const right = r => r.status !== 'graded' ? null : (r.down === 4 && r.jev_fourth ? r.jev_fourth === r.actual_fourth : (r.p_pass >= 0.5 ? 'pass' : 'run') === r.actual_play);
+const sitText = r => `<b>${esc(r.offense)}</b> ${ord[r.down]} &amp; ${r.distance} at ${esc(r.field_position || '')} · Q${r.quarter} ${esc(r.clock || '')}`;
+
+// 100-yard field. Offense always drives left to right; los = yards from the left goal line.
+function fieldSVG(r, id) {
+  const los = 100 - r.yte, fdl = Math.min(100, los + r.distance), g2g = los + r.distance >= 100;
+  const X = y => 20 + y * 3.6; // 360 units of field between end zones at x=20..380
+  let s = `<svg class="field" viewBox="0 0 400 118" role="img" aria-label="Field position: ${esc(r.offense)} ${ord[r.down]} and ${r.distance}, ${r.yte} yards from the end zone" id="${id}">`;
+  s += `<rect x="0" y="0" width="400" height="118" rx="6" class="grass"/><rect x="0" y="0" width="20" height="118" class="ez"/><rect x="380" y="0" width="20" height="118" class="ez"/>`;
+  for (let y = 0; y <= 100; y += 5) s += `<line x1="${X(y)}" y1="6" x2="${X(y)}" y2="112" class="yard ${y % 10 === 0 ? 'five' : ''}"/>`;
+  for (let y = 1; y < 100; y++) if (y % 5) { s += `<line x1="${X(y)}" y1="42" x2="${X(y)}" y2="47" class="hash"/><line x1="${X(y)}" y1="71" x2="${X(y)}" y2="76" class="hash"/>`; }
+  for (let y = 10; y <= 90; y += 10) { const n = y <= 50 ? y : 100 - y; s += `<text x="${X(y)}" y="30" text-anchor="middle" class="num">${n}</text><text x="${X(y)}" y="96" text-anchor="middle" class="num">${n}</text>`; }
+  s += `<text x="10" y="64" text-anchor="middle" transform="rotate(-90 10 64)" class="ezt">${esc(r.offense)}</text><text x="390" y="64" text-anchor="middle" transform="rotate(90 390 64)" class="ezt off">${esc(r.defense)}</text>`;
+  s += `<g class="fdl-g" style="transform:translateX(${X(fdl)}px)"><line x1="0" y1="4" x2="0" y2="114" class="fdl"/></g>`;
+  s += `<g class="los-g" style="transform:translateX(${X(los)}px)"><line x1="0" y1="4" x2="0" y2="114" class="los"/></g>`;
+  s += `<g class="ballg" style="transform:translate(${X(los)}px,59px)"><ellipse rx="7" ry="4.2" class="ball"/><line x1="-3" y1="0" x2="3" y2="0" class="ball-l"/><path d="M12 -5 L22 0 L12 5 Z" class="arrow"/></g>`;
+  if (g2g) s += `<text x="${X(Math.min(los + 6, 92))}" y="14" class="ezt off" style="font-size:9px">GOAL TO GO</text>`;
+  return s + `</svg>`;
+}
+const fieldCap = () => `<div class="fieldcap"><span class="k"><i style="background:var(--pass)"></i> line of scrimmage</span><span class="k"><i style="background:var(--yellow)"></i> first down</span></div>`;
+
+function scorebug(t) {
   const rp = t.runpass, fd = t.fourth, cv = t.conv;
+  const rec = (a, b) => `${a}–${b - a}`;
   return `
-  <div class="card"><h3>Run / pass calls</h3><div class="big">${rp.n}</div>
-    <div class="row"><span class="jev">Jev right</span><b>${pct(rp.jev, rp.n)}</b></div>
-    <div class="row"><span class="coach">Tendency table right</span><b>${pct(rp.base, rp.n)}</b></div>
-    <div class="row muted"><span>Always "pass"</span><b>${pct(rp.always_pass, rp.n)}</b></div></div>
-  <div class="card"><h3>Fourth-down calls</h3><div class="big">${fd.n}</div>
-    <div class="row"><span class="jev">Jev matched the coach</span><b>${pct(fd.jev, fd.n)}</b></div>
-    <div class="row"><span class="coach">Tendency table matched</span><b>${pct(fd.base, fd.n)}</b></div>
-    <div class="row muted"><span>Always "punt"</span><b>${pct(fd.always_punt, fd.n)}</b></div></div>
-  <div class="card"><h3>When coaches went for it</h3><div class="big">${fd.go_n}</div>
-    <div class="row"><span class="jev">Jev had called GO</span><b>${fd.jev_go_recall} of ${fd.go_n}</b></div>
-    <div class="row"><span class="coach">Tendency had called GO</span><b>${fd.base_go_recall} of ${fd.go_n}</b></div>
-    <div class="row muted"><span>Jev said GO, coach went</span><b>${fd.jev_said_go_right} of ${fd.jev_said_go}</b></div></div>
-  <div class="card"><h3>First-down odds (Brier, lower is better)</h3><div class="big">${cv.n ? (cv.rate / cv.n * 100).toFixed(0) + '%' : '–'}<span class="muted" style="font-size:13px;font-weight:400"> of plays moved the chains</span></div>
-    <div class="row"><span class="jev">Jev</span><b>${cv.n ? (cv.jev_brier / cv.n).toFixed(3) : '–'}</b></div>
-    <div class="row"><span class="coach">Tendency table</span><b>${cv.n ? (cv.base_brier / cv.n).toFixed(3) : '–'}</b></div>
-    <div class="row muted"><span>Pending / voided / missed</span><b>${t.pending} / ${t.voided} / ${d_missed}</b></div></div>`;
+  <div><div class="lbl">Run / pass calls</div><div class="head"><div class="big num">${rp.n}</div><div class="sub">graded snaps</div></div>
+    <div class="vs"><div class="side j"><div class="who">Jev</div><div class="val num">${pct(rp.jev, rp.n)}</div></div><div class="side"><div class="who">Tendency table</div><div class="val num">${pct(rp.base, rp.n)}</div></div></div>
+    <div class="foot">Always "pass" would score <b>${pct(rp.always_pass, rp.n)}</b></div></div>
+  <div><div class="lbl">Fourth-down calls</div><div class="head"><div class="big num">${fd.n}</div><div class="sub">decisions</div></div>
+    <div class="vs"><div class="side j"><div class="who">Jev</div><div class="val num">${fd.n ? rec(fd.jev, fd.n) : '–'}</div></div><div class="side"><div class="who">Tendency</div><div class="val num">${fd.n ? rec(fd.base, fd.n) : '–'}</div></div></div>
+    <div class="foot">Matched the coach · always "punt" <b>${pct(fd.always_punt, fd.n)}</b></div></div>
+  <div><div class="lbl">Coach went for it</div><div class="head"><div class="big num">${fd.go_n}</div><div class="sub">times</div></div>
+    <div class="vs"><div class="side j"><div class="who">Jev said GO</div><div class="val num">${fd.go_n ? fd.jev_go_recall : '–'}</div></div><div class="side"><div class="who">Tendency said GO</div><div class="val num">${fd.go_n ? fd.base_go_recall : '–'}</div></div></div>
+    <div class="foot">Jev called GO ${fd.jev_said_go}×, coach went <b>${fd.jev_said_go_right}</b> of those</div></div>
+  <div><div class="lbl">First-down odds · Brier</div><div class="head"><div class="big num">${cv.n ? Math.round(100 * cv.rate / cv.n) + '%' : '–'}</div><div class="sub">of snaps moved<br>the chains</div></div>
+    <div class="vs"><div class="side j"><div class="who">Jev</div><div class="val num">${cv.n ? (cv.jev_brier / cv.n).toFixed(3) : '–'}</div></div><div class="side"><div class="who">Tendency</div><div class="val num">${cv.n ? (cv.base_brier / cv.n).toFixed(3) : '–'}</div></div></div>
+    <div class="foot">Lower is better · pending <b>${t.pending}</b> · voided <b>${t.voided}</b> · missed <b>${window.__missed || 0}</b></div></div>`;
 }
+
+let lastFeatId = null;
+function featured(games) {
+  const live = games.filter(g => g.state === 'in' && g.pending);
+  if (!live.length) { $('#feat').hidden = true; lastFeatId = null; return; }
+  const g = live.sort((a, b) => (b.pending.created_at || '').localeCompare(a.pending.created_at || ''))[0];
+  const p = g.pending, c = callOf(p), b = baseOf(p);
+  const flip = lastFeatId !== p.id; lastFeatId = p.id;
+  const passPct = Math.round((p.p_pass || 0) * 100);
+  $('#feat').hidden = false;
+  $('#feat').innerHTML = `
+    <div class="top"><span class="tag">Latest call · on the field now</span><span class="game">${esc(g.away_abbr)} ${g.away_score ?? 0} – ${esc(g.home_abbr)} ${g.home_score ?? 0} · Q${g.period} ${esc(g.clock || '')}</span></div>
+    <div class="body">
+      <div>
+        <div class="sit">${sitText(p)}</div>
+        <div class="call display${flip ? ' flip' : ''}">${c.t}<small>${f2(c.p)} sure</small></div>
+        <div class="odds">
+          ${p.down === 4 ? `<div class="row"><span>Jev</span><div class="bar"><i style="transform:scaleX(${(Math.round((c.p || 0) * 100)) / 100})"></i></div><span class="v jev">${c.t}</span></div><div class="row"><span>Tendency</span><div class="bar"><i class="coach" style="transform:scaleX(${(Math.round((b.p || 0) * 100)) / 100})"></i></div><span class="v">${b.t}</span></div>`
+          : `<div class="row"><span>Pass odds · Jev</span><div class="bar"><i style="transform:scaleX(${(passPct) / 100})"></i><span class="tick"></span></div><span class="v">${passPct}%</span></div><div class="row"><span>Pass odds · table</span><div class="bar"><i class="coach" style="transform:scaleX(${(Math.round((p.base_p_pass || 0) * 100)) / 100})"></i><span class="tick"></span></div><span class="v">${Math.round((p.base_p_pass || 0) * 100)}%</span></div>`}
+          <div class="row"><span>First down or TD</span><div class="bar"><i style="transform:scaleX(${(Math.round((p.p_conv || 0) * 100)) / 100})"></i></div><span class="v">${f2(p.p_conv)}</span></div>
+        </div>
+      </div>
+      <div class="fieldwrap">${fieldSVG(p, 'feat-field')}${fieldCap()}</div>
+    </div>`;
+}
+
 function gameCard(g) {
-  const p = g.pending, t = g.tally;
-  const live = g.state === 'in';
-  let next = '';
-  if (p && live) {
-    const call = p.down === 4 && p.jev_fourth ? `${lbl[p.jev_fourth]} <span class="muted" style="font-size:13px">${f2(topOf(p.jev_fourth_probs)?.[1])}</span>` : `${p.p_pass >= 0.5 ? 'PASS' : 'RUN'} <span class="muted" style="font-size:13px">${f2(p.p_pass >= 0.5 ? p.p_pass : 1 - p.p_pass)}</span>`;
-    next = `<div class="next"><div class="sit">Next snap: ${esc(p.offense)} ball, ${['', '1st', '2nd', '3rd', '4th'][p.down]} &amp; ${p.distance} at ${esc(p.field_position || '')} · Q${p.quarter} ${esc(p.clock || '')}</div>
-      <div class="call jev">Jev: ${call}</div>
-      <div class="muted" style="font-size:13px">First down or TD: ${f2(p.p_conv)} · tendency table says ${p.down === 4 && p.base_fourth ? lbl[topOf(p.base_fourth)?.[0]] : (p.base_p_pass >= 0.5 ? 'PASS' : 'RUN')} (${f2(p.down === 4 && p.base_fourth ? topOf(p.base_fourth)?.[1] : (p.base_p_pass >= 0.5 ? p.base_p_pass : 1 - p.base_p_pass))})</div>
-      <div class="bar"><i style="width:${Math.round((p.p_pass || 0) * 100)}%"></i></div></div>`;
-  }
-  const rows = g.recent.map(r => {
-    const jevCall = r.down === 4 && r.jev_fourth ? lbl[r.jev_fourth] : (r.p_pass >= 0.5 ? 'PASS' : 'RUN');
-    const actual = r.status === 'voided' ? '<span class="muted">voided</span>' : (r.down === 4 && r.actual_fourth ? lbl[r.actual_fourth] : lbl[r.actual_play] || '–');
-    const right = r.status !== 'graded' ? '' : ((r.down === 4 && r.jev_fourth ? r.jev_fourth === r.actual_fourth : (r.p_pass >= 0.5 ? 'pass' : 'run') === r.actual_play) ? '<span class="tick good">✓</span>' : '<span class="tick bad">✗</span>');
-    return `<tr><td class="n">Q${r.quarter} ${esc(r.clock || '')}</td><td>${esc(r.offense)} ${['', '1st', '2nd', '3rd', '4th'][r.down]}&amp;${r.distance} @ ${esc(r.field_position || '')}</td><td class="jev n">${jevCall}</td><td class="n">${actual} ${right}</td><td class="muted">${esc((r.play_text || '').slice(0, 70))}</td></tr>`;
-  }).join('');
-  return `<div class="game"><div class="hd"><div><b>${esc(g.short_name || g.name)}</b> <span class="muted">${live ? 'Q' + g.period + ' ' + esc(g.clock || '') : esc(g.status || '')}</span></div><div class="score">${esc(g.away_abbr)} ${g.away_score ?? 0} – ${esc(g.home_abbr)} ${g.home_score ?? 0}</div></div>
+  const p = g.pending, t = g.tally, live = g.state === 'in';
+  const offense = p?.offense;
+  const strip = g.recent.slice().reverse().slice(-24).map(r => { const ok = right(r); const cls = r.status === 'voided' ? 'v' : ok ? 'y' : 'n'; const c = callOf(r); return `<span class="t ${cls}${r.down === 4 ? ' f' : ''}" title="Q${r.quarter} ${esc(r.clock || '')} ${esc(r.offense)} ${ord[r.down]}&${r.distance}: Jev ${c.t}, actual ${actualOf(r) || 'voided'}">${r.status === 'voided' ? '·' : ok ? '✓' : '✗'}</span>`; }).join('');
+  const rows = g.recent.map(r => { const c = callOf(r), a = actualOf(r), ok = right(r);
+    return `<tr><td class="n">Q${r.quarter} ${esc(r.clock || '')}</td><td>${esc(r.offense)} ${ord[r.down]}&amp;${r.distance} @ ${esc(r.field_position || '')}</td><td class="n call-${c.k === 'pass' || c.k === 'run' ? c.k : 'pass'}">${c.t} <span class="muted" style="font-weight:500">${f2(c.p)}</span></td><td class="n">${a ? a : '<span class="muted">voided</span>'} ${ok == null ? '' : ok ? '<span class="good">✓</span>' : '<span class="bad">✗</span>'}</td><td class="play">${esc((r.play_text || '').slice(0, 80))}</td></tr>`; }).join('');
+  const next = p && live ? (c => `<div class="next"><div class="sit">Next snap · ${sitText(p)}</div><div class="c">${c.t}<small>${f2(c.p)}</small></div></div>`)(callOf(p)) : '';
+  return `<article class="g${live ? ' live' : ''}">
+    <div class="hd"><div class="teams"><span class="team${offense === g.away_abbr && live ? ' off' : ''}">${esc(g.away_abbr)}<span class="s num">${g.away_score ?? 0}</span></span><span class="team${offense === g.home_abbr && live ? ' off' : ''}">${esc(g.home_abbr)}<span class="s num">${g.home_score ?? 0}</span></span></div><div class="clock${live ? ' on' : ''}">${live ? 'Q' + g.period + ' · ' + esc(g.clock || '') : esc(g.status || '')}</div></div>
+    ${p && live ? `<div class="fieldwrap">${fieldSVG(p, 'f-' + g.id)}</div>` : ''}
     ${next}
-    <div class="muted" style="font-size:13px">Run/pass: Jev ${pct(t.runpass.jev, t.runpass.n)} · tendency ${pct(t.runpass.base, t.runpass.n)} on ${t.runpass.n} plays · 4th down: Jev ${t.fourth.jev}/${t.fourth.n}, tendency ${t.fourth.base}/${t.fourth.n}</div>
-    ${rows ? `<table><thead><tr><th>When</th><th>Situation</th><th>Jev</th><th>Actual</th><th>Play</th></tr></thead><tbody>${rows}</tbody></table>` : ''}</div>`;
+    <div class="strip"><span class="lbl">Last ${Math.min(24, g.recent.length)}</span>${strip || '<span class="muted" style="font-size:13px">no graded calls yet</span>'}</div>
+    <div class="tot"><span>Run/pass <b>Jev ${pct(t.runpass.jev, t.runpass.n)}</b> · table ${pct(t.runpass.base, t.runpass.n)} · ${t.runpass.n} snaps</span><span>4th down <b>Jev ${t.fourth.jev}/${t.fourth.n}</b> · table ${t.fourth.base}/${t.fourth.n}</span></div>
+    ${rows ? `<details class="log"><summary>Call log</summary><table><thead><tr><th>When</th><th>Situation</th><th>Jev</th><th>Actual</th><th>Play</th></tr></thead><tbody>${rows}</tbody></table></details>` : ''}
+  </article>`;
 }
-function fourthRows(list) {
-  return list.map(r => { const b = topOf(r.base_fourth); const conv = r.actual_fourth === 'go_for_it' ? (r.actual_converted ? 'converted' : 'stopped') : (r.actual_fourth === 'field_goal' ? (/good/i.test(r.play_text || '') ? 'good' : /no good|missed|blocked/i.test(r.play_text || '') ? 'missed' : '') : '');
-    return `<tr><td>${esc(r.short_name || r.game_id)}</td><td>${esc(r.offense)} 4th &amp; ${r.distance} @ ${esc(r.field_position || '')} · Q${r.quarter} ${esc(r.clock || '')}</td><td class="jev n">${lbl[r.jev_fourth] || '–'} ${f2(topOf(r.jev_fourth_probs)?.[1])}</td><td class="coach n">${b ? lbl[b[0]] + ' ' + f2(b[1]) : '–'}</td><td class="n"><b>${lbl[r.actual_fourth] || '–'}</b> ${r.jev_fourth === r.actual_fourth ? '<span class="good">✓</span>' : '<span class="bad">✗</span>'}</td><td class="muted">${conv}</td></tr>`; }).join('');
+
+function reel(list, names) {
+  if (!list.length) return '<div class="empty">No fourth downs yet.</div>';
+  return list.map(r => { const c = callOf(r), b = baseOf(r), a = lbl[r.actual_fourth] || '–', ok = r.jev_fourth === r.actual_fourth;
+    const out = r.actual_fourth === 'go_for_it' ? (r.actual_converted ? ['y', 'converted'] : ['n', 'stopped']) : r.actual_fourth === 'field_goal' ? (/good/i.test(r.play_text || '') && !/no good/i.test(r.play_text || '') ? ['y', 'good'] : /no good|missed|blocked/i.test(r.play_text || '') ? ['n', 'missed'] : ['', '']) : ['', ''];
+    return `<div class="fd${ok ? ' agree' : ''}${r.jev_fourth === 'go_for_it' ? ' go' : ''}">
+      <div class="who">${esc(names[r.game_id] || r.game_id)}<small>Q${r.quarter} ${esc(r.clock || '')}</small></div>
+      <div class="sit">${sitText(r)}</div>
+      <div class="pick j"><div class="k">Jev</div><div class="v">${c.t}</div><div class="p">${f2(c.p)}</div></div>
+      <div class="pick"><div class="k">Tendency</div><div class="v">${b.t}</div><div class="p">${f2(b.p)}</div></div>
+      <div class="pick"><div class="k">Coach did</div><div class="v ${ok ? 'good' : 'bad'}">${a}</div><div class="p">${out[1] ? `<span class="out ${out[0]}">${out[1]}</span>` : '&nbsp;'}</div></div>
+    </div>`; }).join('');
 }
-const gameNames = {};
+
+const names = {};
 async function refresh() {
   try {
     const q = location.search.includes('replay=1') ? '?replay=1' : '';
     const r = await fetch('/api/state' + q, { cache: 'no-store' }); const d = await r.json();
-    const anyLive = d.games.some(g => g.state === 'in'); d_missed = d.missed || 0;
-    const age = d.heartbeat ? Math.round((Date.now() - new Date(d.heartbeat).getTime()) / 1000) : null; const hb = $('#hb'); if (anyLive && age != null) { hb.style.display = ''; hb.textContent = age > 90 ? 'feed stale ' + age + 's' : 'updated ' + age + 's ago'; hb.className = 'live' + (age > 90 ? ' off' : ''); } else hb.style.display = 'none';
-    $('#live').textContent = anyLive ? 'live' : (d.games.length ? 'no game in progress' : 'waiting for kickoff'); $('#live').className = 'live' + (anyLive ? '' : ' off');
-    $('#cards').innerHTML = cards(d.tally);
-    for (const g of d.games) gameNames[g.id] = g.short_name;
+    window.__missed = d.missed || 0;
+    const anyLive = d.games.some(g => g.state === 'in');
+    const age = d.heartbeat ? Math.round((Date.now() - new Date(d.heartbeat).getTime()) / 1000) : null;
+    const st = $('#status'); st.className = 'status' + (anyLive ? (age > 90 ? ' stale' : ' on') : '');
+    $('#status-t').textContent = anyLive ? (age > 90 ? `feed stale · ${age}s` : `live · updated ${age}s ago`) : (d.games.length ? 'no game in progress' : 'waiting for kickoff');
+    $('#bug').innerHTML = scorebug(d.tally);
+    for (const g of d.games) names[g.id] = g.short_name;
+    featured(d.games);
     const order = d.games.slice().sort((a, b) => (b.state === 'in') - (a.state === 'in') || (a.date || '').localeCompare(b.date || ''));
-    $('#games').innerHTML = order.length ? order.map(gameCard).join('') : '<div class="empty">Waiting for the first snap.</div>';
-    $('#fourth tbody').innerHTML = fourthRows(d.fourth_ledger.map(r => ({ ...r, short_name: gameNames[r.game_id] })));
-  } catch (e) { $('#live').textContent = 'reconnecting'; $('#live').className = 'live off'; }
+    $('#games-sub').textContent = order.length ? `${order.filter(g => g.state === 'in').length} live · ${order.length} on the board` : '';
+    $('#games').innerHTML = order.length ? order.map(gameCard).join('') : '<div class="empty"><b>Waiting for kickoff</b>Calls start with the first snap of the day.</div>';
+    $('#reel').innerHTML = reel(d.fourth_ledger, names);
+  } catch (e) { $('#status').className = 'status stale'; $('#status-t').textContent = 'reconnecting'; }
 }
 refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 30000); document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 </script>
