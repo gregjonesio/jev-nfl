@@ -1,5 +1,5 @@
 // ESPN feed helpers: fetch scoreboard/summary, flatten plays, derive the pre-snap state for the NEXT play, grade a play.
-const UA = { 'User-Agent': 'jev-nfl/0.1 (gregoryalanjones@gmail.com)' };
+const UA = {}; // ESPN began returning 403 to a custom User-Agent on 2026-09-20; the runtime default passes
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const TIMEOUT_MS = 8000;
 
