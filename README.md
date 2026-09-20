@@ -2,7 +2,7 @@
 
 Before every NFL snap, [Jev](https://typesafe.ai) (TypeSafe's System One model, a decision-only model that cannot write text) calls **run or pass** and, on fourth down, **go, punt or field goal**. Each call is made from the latest play visible in the ESPN feed (which runs some seconds behind the stadium), timestamped before the poller sees the outcome, and graded against what the coach actually did. When several plays arrive in one poll only the first is graded and the rest are counted as missed. A plain league-tendency table is the baseline.
 
-Live: https://jev-nfl.gregoryalanjones.workers.dev (add `?replay=1` to see a replayed past game)
+Live: https://jev-nfl.gregjones.io (add `?replay=1` to see a replayed past game)
 
 ## How it works
 

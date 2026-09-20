@@ -21,7 +21,7 @@ const upsertPred = (db, p) => db.prepare(`INSERT INTO predictions (${PRED_COLS.j
 const validRow = (p) => p && typeof p.id === 'string' && p.id.length < 120 && typeof p.game_id === 'string' && ['pending', 'graded', 'voided'].includes(p.status);
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization,content-type', 'access-control-allow-methods': 'GET,POST' } });
 
@@ -47,12 +47,16 @@ export default {
 
     if (url.pathname === '/api/state') {
       const key = url.searchParams.get('replay') === '1' ? 'replay' : 'live';
+      const H = { 'content-type': 'application/json; charset=utf-8', ...SEC, 'cache-control': 'public, max-age=10' };
+      const cache = caches.default; const cacheKey = new Request(url.toString(), { method: 'GET' });
+      const hit = await cache.match(cacheKey); if (hit) return hit;
       const m = memo[key];
-      if (m && Date.now() - m.at < MEMO_MS) return new Response(m.body, { headers: { 'content-type': 'application/json; charset=utf-8', ...SEC } });
-      const row = await env.DB.prepare('SELECT json FROM snapshots WHERE id=?').bind(key).first();
-      const body = row?.json || JSON.stringify(buildState([], {}));
-      memo[key] = { at: Date.now(), body };
-      return new Response(body, { headers: { 'content-type': 'application/json; charset=utf-8', ...SEC } });
+      let body;
+      if (m && Date.now() - m.at < MEMO_MS) body = m.body;
+      else { const row = await env.DB.prepare('SELECT json FROM snapshots WHERE id=?').bind(key).first(); body = row?.json || JSON.stringify(buildState([], {})); memo[key] = { at: Date.now(), body }; }
+      const res = new Response(body, { headers: H });
+      ctx.waitUntil(cache.put(cacheKey, res.clone()));
+      return res;
     }
 
     // rows for the poller to rehydrate after a restart (public data, small)

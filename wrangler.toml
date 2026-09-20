@@ -2,6 +2,7 @@ name = "jev-nfl"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
+routes = [{ pattern = "jev-nfl.gregjones.io", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"
