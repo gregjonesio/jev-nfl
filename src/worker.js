@@ -3,6 +3,7 @@
 // the Worker never rescans the predictions table during a game. Writes are monotonic: a graded or voided row is
 // never reverted to pending by a late or duplicate payload.
 import page from './page.html';
+import og from './og.png';
 import { buildState } from './tally.mjs';
 
 const GAME_COLS = ['id', 'name', 'short_name', 'date', 'status', 'state', 'home_abbr', 'away_abbr', 'home_score', 'away_score', 'period', 'clock', 'replay', 'updated_at'];
@@ -75,6 +76,7 @@ export default {
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="jev-nfl-ledger.csv"', 'cache-control': 'public, max-age=120', 'access-control-allow-origin': '*' } });
     }
 
+    if (url.pathname === '/og.png') return new Response(og, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400', 'access-control-allow-origin': '*' } });
     if (url.pathname === '/' || url.pathname === '/index.html') return new Response(page, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:" } });
     return json({ error: 'not found' }, 404);
   },

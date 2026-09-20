@@ -14,5 +14,10 @@ type = "Text"
 globs = ["**/*.html"]
 fallthrough = true
 
+[[rules]]
+type = "Data"
+globs = ["**/*.png"]
+fallthrough = true
+
 [observability]
 enabled = true
