@@ -72,6 +72,7 @@ function gradeInto(row, p, grade, match) {
 
 async function processGame(gid, s, row, live) {
   const g = games[gid] = games[gid] || { teams: teamsOf(s), seen: new Map(), pending: null, lastPredictedFor: null, closed: false, rows: {}, missed: 0 };
+  if (!g.teams || !Object.keys(g.teams).length) g.teams = teamsOf(s); // a pre-kickoff placeholder has no teams yet
   g.row = row;
   const plays = allPlays(s);
   const out = { games: [row], predictions: [] };
@@ -162,7 +163,8 @@ while (new Date() < stopAt) {
     if (!sb) errors.espn++;
     const events = sb?.events || [];
     const now = Date.now();
-    const active = events.filter(e => { const st = e.status?.type?.state; const start = new Date(e.date).getTime(); return st === 'in' || (st === 'pre' && start - now < 30 * 60000 && start - now > -3 * 3600000) || (st === 'post' && games[e.id] && !games[e.id].closed); });
+    // live games; games within 30 min of kickoff; finished games from the last 12 hours seen once (so a restart keeps the day's finals on the page)
+    const active = events.filter(e => { const st = e.status?.type?.state; const start = new Date(e.date).getTime(); return st === 'in' || (st === 'pre' && start - now < 30 * 60000 && start - now > -3 * 3600000) || (st === 'post' && now - start < 12 * 3600000 && !(games[e.id] && games[e.id].closed)); });
     anyLive = active.some(e => e.status?.type?.state === 'in');
     const batch = { games: [], predictions: [] };
     let idx = 0;
