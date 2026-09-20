@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev Calls the Play</title>
+<meta name="description" content="Before every NFL snap, a decision-only AI model calls run or pass and, on fourth down, go, punt or kick. Graded live against what the coach did.">
+<style>
+  :root { --bg:#0b0f14; --panel:#121923; --line:#1f2a37; --text:#e6edf3; --muted:#8b98a8; --accent:#5ee3a1; --bad:#ff6b6b; --warn:#ffd166; --jev:#7cc4ff; --coach:#c9b3ff; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--jev) }
+  .wrap { max-width:1100px; margin:0 auto; padding:20px 16px 60px }
+  header h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.02em }
+  header p { margin:0; color:var(--muted); max-width:760px }
+  .live { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#16351f; color:var(--accent); margin-left:8px; vertical-align:middle }
+  .live.off { background:#2a2f38; color:var(--muted) }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin:18px 0 }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px }
+  .card h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted) }
+  .big { font-size:30px; font-weight:700; letter-spacing:-.02em }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px solid var(--line) }
+  .row:first-of-type { border-top:0 }
+  .row b { font-variant-numeric:tabular-nums }
+  .jev { color:var(--jev) } .coach { color:var(--coach) } .good { color:var(--accent) } .bad { color:var(--bad) } .muted { color:var(--muted) }
+  h2 { font-size:18px; margin:26px 0 10px }
+  .games { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:12px }
+  .game { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px }
+  .game .hd { display:flex; justify-content:space-between; align-items:baseline; gap:8px }
+  .game .hd .score { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums }
+  .next { margin:10px 0; padding:10px 12px; border-radius:10px; background:#0e1a2a; border:1px solid #1d3350 }
+  .next .sit { font-weight:600 }
+  .next .call { font-size:20px; font-weight:700; margin-top:2px }
+  .bar { height:6px; background:#1f2a37; border-radius:3px; overflow:hidden; margin-top:6px }
+  .bar i { display:block; height:100%; background:var(--jev) }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px }
+  td, th { padding:4px 6px; border-top:1px solid var(--line); text-align:left; vertical-align:top }
+  th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.06em; border-top:0 }
+  td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
+  .tick { font-weight:700 }
+  footer { margin-top:36px; color:var(--muted); font-size:13px }
+  footer p { margin:6px 0 }
+  .empty { color:var(--muted); padding:30px; text-align:center; border:1px dashed var(--line); border-radius:12px }
+  @media (max-width:600px){ .big{font-size:24px} header h1{font-size:22px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Jev Calls the Play <span id="live" class="live off">connecting</span> <span id="hb" class="live off" style="display:none"></span></h1>
+    <p>Before every NFL snap, <a href="https://typesafe.ai" rel="noopener">Jev</a>, a decision-only AI model that cannot write text, calls <b>run or pass</b> and, on fourth down, <b>go, punt or kick</b>. Each call is made from the latest play visible in the feed, timestamped before the poller sees the outcome, and graded against what actually happened. The baseline is a plain league-tendency table (what coaches usually do in that situation), built from earlier weeks.</p>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <h2>Games</h2>
+  <div class="games" id="games"><div class="empty">Waiting for the first snap.</div></div>
+
+  <h2>Fourth-down ledger</h2>
+  <div class="card"><table id="fourth"><thead><tr><th>Game</th><th>Situation</th><th>Jev</th><th>Tendency</th><th>Coach did</th><th>Result</th></tr></thead><tbody></tbody></table></div>
+
+  <footer>
+    <p><b>Method.</b> Play-by-play comes from ESPN's public feed, polled every ten seconds, which runs some seconds behind the stadium, so a call is made from the latest play the poller has seen, before it sees the outcome, and not always before the real snap. When several plays arrive in one poll only the first is graded and the rest are counted as missed. After each play, the code builds the pre-snap situation for the next play (down, distance, field position, score, clock, last three plays, plus league tendency rates for that situation) and asks Jev three typed questions: pass or run, go/punt/kick on fourth down, and the probability of a first down or touchdown. Model pinned to <code>jev-1.13.0</code>. If a penalty or timeout changes the situation before the snap, the call is voided, not regraded. Scrambles and sacks count as pass plays.</p>
+    <p><b>Baseline.</b> Smoothed bucket tables from ESPN play-by-play of the prior weeks: pass rate by down, distance, field position and game situation; fourth-down choice rates by distance and field position. Jev is shown those same rates as part of its input, so the comparison is "tendencies alone" versus "tendencies plus judgment".</p>
+    <p><b>Backtest before launch</b> (four held-out games, 540 plays, 37 fourth downs): run/pass accuracy tendency 65.0%, Jev 64.6%, always-pass 60.4%. Fourth-down accuracy tendency 62.2%, Jev 64.9%, always-punt 51.4%. Expect Jev to roughly match the tendency table on run/pass and to be more willing than coaches to go for it.</p>
+    <p><a href="/api/ledger.csv">Download the full ledger (CSV)</a> · <a href="/api/state">JSON</a> · Built by <a href="https://gregjones.io" rel="noopener">Greg Jones</a>. No wagering, no affiliation with the NFL, ESPN or TypeSafe.</p>
+  </footer>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '–';
+const f2 = x => x == null ? '–' : (Math.round(x * 100) + '%');
+const lbl = { go_for_it: 'GO', punt: 'PUNT', field_goal: 'FG', pass: 'PASS', run: 'RUN' };
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const topOf = j => { try { const o = JSON.parse(j); return Object.entries(o).sort((a, b) => b[1] - a[1])[0]; } catch { return null; } };
+let d_missed = 0;
+function cards(t) {
+  const rp = t.runpass, fd = t.fourth, cv = t.conv;
+  return `
+  <div class="card"><h3>Run / pass calls</h3><div class="big">${rp.n}</div>
+    <div class="row"><span class="jev">Jev right</span><b>${pct(rp.jev, rp.n)}</b></div>
+    <div class="row"><span class="coach">Tendency table right</span><b>${pct(rp.base, rp.n)}</b></div>
+    <div class="row muted"><span>Always "pass"</span><b>${pct(rp.always_pass, rp.n)}</b></div></div>
+  <div class="card"><h3>Fourth-down calls</h3><div class="big">${fd.n}</div>
+    <div class="row"><span class="jev">Jev matched the coach</span><b>${pct(fd.jev, fd.n)}</b></div>
+    <div class="row"><span class="coach">Tendency table matched</span><b>${pct(fd.base, fd.n)}</b></div>
+    <div class="row muted"><span>Always "punt"</span><b>${pct(fd.always_punt, fd.n)}</b></div></div>
+  <div class="card"><h3>When coaches went for it</h3><div class="big">${fd.go_n}</div>
+    <div class="row"><span class="jev">Jev had called GO</span><b>${fd.jev_go_recall} of ${fd.go_n}</b></div>
+    <div class="row"><span class="coach">Tendency had called GO</span><b>${fd.base_go_recall} of ${fd.go_n}</b></div>
+    <div class="row muted"><span>Jev said GO, coach went</span><b>${fd.jev_said_go_right} of ${fd.jev_said_go}</b></div></div>
+  <div class="card"><h3>First-down odds (Brier, lower is better)</h3><div class="big">${cv.n ? (cv.rate / cv.n * 100).toFixed(0) + '%' : '–'}<span class="muted" style="font-size:13px;font-weight:400"> of plays moved the chains</span></div>
+    <div class="row"><span class="jev">Jev</span><b>${cv.n ? (cv.jev_brier / cv.n).toFixed(3) : '–'}</b></div>
+    <div class="row"><span class="coach">Tendency table</span><b>${cv.n ? (cv.base_brier / cv.n).toFixed(3) : '–'}</b></div>
+    <div class="row muted"><span>Pending / voided / missed</span><b>${t.pending} / ${t.voided} / ${d_missed}</b></div></div>`;
+}
+function gameCard(g) {
+  const p = g.pending, t = g.tally;
+  const live = g.state === 'in';
+  let next = '';
+  if (p && live) {
+    const call = p.down === 4 && p.jev_fourth ? `${lbl[p.jev_fourth]} <span class="muted" style="font-size:13px">${f2(topOf(p.jev_fourth_probs)?.[1])}</span>` : `${p.p_pass >= 0.5 ? 'PASS' : 'RUN'} <span class="muted" style="font-size:13px">${f2(p.p_pass >= 0.5 ? p.p_pass : 1 - p.p_pass)}</span>`;
+    next = `<div class="next"><div class="sit">Next snap: ${esc(p.offense)} ball, ${['', '1st', '2nd', '3rd', '4th'][p.down]} &amp; ${p.distance} at ${esc(p.field_position || '')} · Q${p.quarter} ${esc(p.clock || '')}</div>
+      <div class="call jev">Jev: ${call}</div>
+      <div class="muted" style="font-size:13px">First down or TD: ${f2(p.p_conv)} · tendency table says ${p.down === 4 && p.base_fourth ? lbl[topOf(p.base_fourth)?.[0]] : (p.base_p_pass >= 0.5 ? 'PASS' : 'RUN')} (${f2(p.down === 4 && p.base_fourth ? topOf(p.base_fourth)?.[1] : (p.base_p_pass >= 0.5 ? p.base_p_pass : 1 - p.base_p_pass))})</div>
+      <div class="bar"><i style="width:${Math.round((p.p_pass || 0) * 100)}%"></i></div></div>`;
+  }
+  const rows = g.recent.map(r => {
+    const jevCall = r.down === 4 && r.jev_fourth ? lbl[r.jev_fourth] : (r.p_pass >= 0.5 ? 'PASS' : 'RUN');
+    const actual = r.status === 'voided' ? '<span class="muted">voided</span>' : (r.down === 4 && r.actual_fourth ? lbl[r.actual_fourth] : lbl[r.actual_play] || '–');
+    const right = r.status !== 'graded' ? '' : ((r.down === 4 && r.jev_fourth ? r.jev_fourth === r.actual_fourth : (r.p_pass >= 0.5 ? 'pass' : 'run') === r.actual_play) ? '<span class="tick good">✓</span>' : '<span class="tick bad">✗</span>');
+    return `<tr><td class="n">Q${r.quarter} ${esc(r.clock || '')}</td><td>${esc(r.offense)} ${['', '1st', '2nd', '3rd', '4th'][r.down]}&amp;${r.distance} @ ${esc(r.field_position || '')}</td><td class="jev n">${jevCall}</td><td class="n">${actual} ${right}</td><td class="muted">${esc((r.play_text || '').slice(0, 70))}</td></tr>`;
+  }).join('');
+  return `<div class="game"><div class="hd"><div><b>${esc(g.short_name || g.name)}</b> <span class="muted">${live ? 'Q' + g.period + ' ' + esc(g.clock || '') : esc(g.status || '')}</span></div><div class="score">${esc(g.away_abbr)} ${g.away_score ?? 0} – ${esc(g.home_abbr)} ${g.home_score ?? 0}</div></div>
+    ${next}
+    <div class="muted" style="font-size:13px">Run/pass: Jev ${pct(t.runpass.jev, t.runpass.n)} · tendency ${pct(t.runpass.base, t.runpass.n)} on ${t.runpass.n} plays · 4th down: Jev ${t.fourth.jev}/${t.fourth.n}, tendency ${t.fourth.base}/${t.fourth.n}</div>
+    ${rows ? `<table><thead><tr><th>When</th><th>Situation</th><th>Jev</th><th>Actual</th><th>Play</th></tr></thead><tbody>${rows}</tbody></table>` : ''}</div>`;
+}
+function fourthRows(list) {
+  return list.map(r => { const b = topOf(r.base_fourth); const conv = r.actual_fourth === 'go_for_it' ? (r.actual_converted ? 'converted' : 'stopped') : (r.actual_fourth === 'field_goal' ? (/good/i.test(r.play_text || '') ? 'good' : /no good|missed|blocked/i.test(r.play_text || '') ? 'missed' : '') : '');
+    return `<tr><td>${esc(r.short_name || r.game_id)}</td><td>${esc(r.offense)} 4th &amp; ${r.distance} @ ${esc(r.field_position || '')} · Q${r.quarter} ${esc(r.clock || '')}</td><td class="jev n">${lbl[r.jev_fourth] || '–'} ${f2(topOf(r.jev_fourth_probs)?.[1])}</td><td class="coach n">${b ? lbl[b[0]] + ' ' + f2(b[1]) : '–'}</td><td class="n"><b>${lbl[r.actual_fourth] || '–'}</b> ${r.jev_fourth === r.actual_fourth ? '<span class="good">✓</span>' : '<span class="bad">✗</span>'}</td><td class="muted">${conv}</td></tr>`; }).join('');
+}
+const gameNames = {};
+async function refresh() {
+  try {
+    const q = location.search.includes('replay=1') ? '?replay=1' : '';
+    const r = await fetch('/api/state' + q, { cache: 'no-store' }); const d = await r.json();
+    const anyLive = d.games.some(g => g.state === 'in'); d_missed = d.missed || 0;
+    const age = d.heartbeat ? Math.round((Date.now() - new Date(d.heartbeat).getTime()) / 1000) : null; const hb = $('#hb'); if (anyLive && age != null) { hb.style.display = ''; hb.textContent = age > 90 ? 'feed stale ' + age + 's' : 'updated ' + age + 's ago'; hb.className = 'live' + (age > 90 ? ' off' : ''); } else hb.style.display = 'none';
+    $('#live').textContent = anyLive ? 'live' : (d.games.length ? 'no game in progress' : 'waiting for kickoff'); $('#live').className = 'live' + (anyLive ? '' : ' off');
+    $('#cards').innerHTML = cards(d.tally);
+    for (const g of d.games) gameNames[g.id] = g.short_name;
+    const order = d.games.slice().sort((a, b) => (b.state === 'in') - (a.state === 'in') || (a.date || '').localeCompare(b.date || ''));
+    $('#games').innerHTML = order.length ? order.map(gameCard).join('') : '<div class="empty">Waiting for the first snap.</div>';
+    $('#fourth tbody').innerHTML = fourthRows(d.fourth_ledger.map(r => ({ ...r, short_name: gameNames[r.game_id] })));
+  } catch (e) { $('#live').textContent = 'reconnecting'; $('#live').className = 'live off'; }
+}
+refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 30000); document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+</script>
+</body>
+</html>

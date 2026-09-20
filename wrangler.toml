@@ -1,0 +1,17 @@
+name = "jev-nfl"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jev-nfl"
+database_id = "da8544eb-3bc0-4665-9e07-e5eba8afb344"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[observability]
+enabled = true

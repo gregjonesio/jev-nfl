@@ -1,0 +1,8 @@
+node_modules/
+data/summary-*.json
+data/*.jsonl
+data/*.log
+data/backtest-results.json
+data/replay-run.log
+.wrangler/
+.env*
