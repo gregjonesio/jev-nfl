@@ -27,6 +27,11 @@ const ledger = (o) => { try { fs.appendFileSync(ledgerPath, JSON.stringify(o) + 
 const errors = { jev: 0, espn: 0, push: 0, cycle: 0 };
 process.on('unhandledRejection', (e) => log('unhandled rejection', e?.message || e));
 process.on('uncaughtException', (e) => log('uncaught exception', e?.message || e));
+// Keep the event loop alive for the life of the process. On 2026-09-21 the idle loop died with Node exit code 13
+// ("unsettled top-level await" at the scoreboard fetch): the loop drained while a fetch was pending, because the only
+// other timer (AbortSignal.timeout) is unref'd. A ref'd interval means an in-flight await can never end the process.
+const keepAlive = setInterval(() => {}, 30000);
+process.on('exit', (code) => { clearInterval(keepAlive); log('exit', code); });
 
 // ---- durable outbox: rows that failed to reach the Worker are written to disk and retried oldest-first ----
 function outboxLoad() { try { return fs.existsSync(outboxPath) ? fs.readFileSync(outboxPath, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)) : []; } catch (e) { log('outbox read failed', e.message); return []; } }
