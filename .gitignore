@@ -6,3 +6,4 @@ data/backtest-results.json
 data/replay-run.log
 .wrangler/
 .env*
+data/health.json

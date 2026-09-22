@@ -8,6 +8,7 @@ import { scoreboard, summary, teamsOf, allPlays, gradePlay, nextState, stateKeyO
 import { loadBaseline, baselinePredict } from './baseline.mjs';
 import { askJev, hintsFrom, MODEL } from './jev.mjs';
 import { buildState } from './tally.mjs';
+import { createHealth, noteBoard, notePush, breaches, verdict, BEAT_EVERY_MS } from './health.mjs';
 
 const args = process.argv.slice(2);
 const arg = (k, d = null) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -19,6 +20,10 @@ fs.mkdirSync(dataDir, { recursive: true });
 const B = loadBaseline();
 const tokRaw = fs.readFileSync('C:/Users/grego/secrets/jev-nfl/.env', 'utf8'); const TOKEN = (tokRaw.match(/^\s*INGEST_TOKEN\s*=\s*(.+)\s*$/m) || [])[1]?.trim();
 if (!TOKEN) { console.error('no INGEST_TOKEN'); process.exit(1); }
+// Optional heartbeat to the owner's dead-man monitor. URL and id live in the secrets file, the token in the environment;
+// with any of them missing the poller runs exactly as before and only logs that no heartbeat is configured.
+const envKey = (k) => (tokRaw.match(new RegExp(`^\\s*${k}\\s*=\\s*(.+)\\s*$`, 'm')) || [])[1]?.trim();
+const BEAT = { url: envKey('HEARTBEAT_URL'), id: envKey('HEARTBEAT_ID'), token: process.env.AIWF_LOG_TOKEN };
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const day = new Date().toISOString().slice(0, 10);
 const ledgerPath = path.join(dataDir, `ledger-${REPLAY ? 'replay' : day}.jsonl`);
@@ -47,17 +52,42 @@ async function push(body) {
   const queued = outboxLoad();
   const predictions = [...queued, ...(body.predictions || [])];
   for (let a = 0; a < 2; a++) {
-    try { await postIngest({ ...body, predictions }); if (queued.length) { log(`outbox drained: ${queued.length} rows`); } outboxSave([]); return true; }
+    try { await postIngest({ ...body, predictions }); if (queued.length) { log(`outbox drained: ${queued.length} rows`); } outboxSave([]); notePush(health, true, Date.now()); return true; }
     catch (e) { errors.push++; log('push failed', e.message); if (/unauthorized/.test(e.message)) break; await new Promise(r => setTimeout(r, 2000 * (a + 1))); }
   }
   // dedupe by id keeping the latest version, persist
   const byId = new Map(); for (const p of predictions) byId.set(p.id, p);
   outboxSave([...byId.values()]);
+  notePush(health, false, Date.now());
   return false;
 }
 if (CLEAR) { try { await postIngest({ delete_replay: true }); log('replay rows cleared'); } catch (e) { log(e.message); } process.exit(0); }
 
-const games = {}; // id -> { teams, seen:Map(id->fingerprint), pending, lastPredictedFor, closed, rows:{id->row}, missed, row }
+const games = {}; // id -> { teams, seen:Map(id->fingerprint), pending, lastPredictedFor, closed, rows:{id->row}, missed, row, primed, playsSinceCall }
+const health = createHealth(Date.now());
+const healthPath = path.join(dataDir, 'health.json');
+let sticky = null; try { sticky = JSON.parse(fs.readFileSync(healthPath, 'utf8')); } catch {}
+// Checked every poll so a short outage between heartbeats still sticks; posted every 30 min and at stop time.
+let lastBreachLog = '';
+function checkHealth() {
+  const now = Date.now();
+  const current = breaches(health, Object.values(games).filter(g => g.row).map(g => ({ name: g.row.short_name, live: g.row.state === 'in', playsSinceCall: g.playsSinceCall || 0 })), now);
+  const v = verdict(current, sticky, now);
+  if (JSON.stringify(v.sticky) !== JSON.stringify(sticky)) { sticky = v.sticky; try { fs.writeFileSync(healthPath, JSON.stringify(sticky)); } catch (e) { log('health write failed', e.message); } }
+  const line = current.map(b => `${b.code} ${b.detail}`).join('; ');
+  if (line && line !== lastBreachLog) log('HEALTH BREACH', line);
+  lastBreachLog = line;
+  return v;
+}
+async function heartbeat() {
+  const v = checkHealth();
+  if (!BEAT.url || !BEAT.id || !BEAT.token) { log(`heartbeat not configured (${v.status})`); return; }
+  const body = { automation_id: BEAT.id, status: v.status, source: 'manual', ...(v.error_code ? { error_code: v.error_code } : {}) };
+  try {
+    const r = await fetch(BEAT.url, { method: 'POST', headers: { 'x-log-token': BEAT.token, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000) });
+    log(`heartbeat ${r.status} ${v.status}${v.error_code ? ' ' + v.error_code : ''}`);
+  } catch (e) { log('heartbeat failed', e.name || 'error'); }
+}
 const fp = (p) => `${p.type?.text}|${p.text}|${JSON.stringify(p.start)}|${JSON.stringify(p.end)}|${p.homeScore}-${p.awayScore}`;
 
 function gameRow(ev, s, replay) {
@@ -93,6 +123,7 @@ async function processGame(gid, s, row, live) {
       continue;
     }
     if (!grade) continue; // timeout, penalty, kickoff, try: the situation may still be intact
+    if (live && g.primed) g.playsSinceCall = (g.playsSinceCall || 0) + 1;
     if (g.pending) {
       gradeInto(g.pending.row, p, grade, stateKeyOfStart(p) === g.pending.key);
       out.predictions.push(g.pending.row); ledger({ type: 'grade', ...g.pending.row }); g.pending = null;
@@ -108,7 +139,7 @@ async function processGame(gid, s, row, live) {
       const jev = await askJev(st, hintsFrom(base));
       if (jev.error) { errors.jev++; log(row.short_name, 'jev error', jev.error); }
       else {
-        g.lastPredictedFor = last.id;
+        g.lastPredictedFor = last.id; g.playsSinceCall = 0;
         const row2 = { id: `${row.id}|${last.id}`, game_id: row.id, seq: Number(last.sequenceNumber) || plays.length, created_at: new Date().toISOString(),
           down: st.down, distance: st.distance, yte: st.yards_to_endzone, offense: st.offense, defense: st.defense, quarter: st.quarter, clock: st.clock, field_position: st.field_position,
           p_pass: jev.p_pass, jev_play: jev.play_type, play_conf: jev.play_conf, p_conv: jev.p_conv, jev_fourth: jev.fourth?.choice || null, jev_fourth_probs: jev.fourth ? JSON.stringify(jev.fourth.probabilities) : null,
@@ -119,6 +150,7 @@ async function processGame(gid, s, row, live) {
       }
     }
   }
+  g.primed = true;
   if (!live && g.pending) { const r = g.pending.row; r.status = 'voided'; r.graded_at = new Date().toISOString(); r.play_text = 'game over'; out.predictions.push(r); ledger({ type: 'void', ...r }); g.pending = null; }
   return out;
 }
@@ -160,7 +192,7 @@ if (REPLAY) {
 // ---- live loop ----
 log('live poller up, worker', WORKER, 'ledger', ledgerPath);
 const stopAt = new Date(); stopAt.setHours(23, 45, 0, 0);
-let cycles = 0, rehydrated = false;
+let cycles = 0, rehydrated = false, lastBeat = 0;
 while (new Date() < stopAt) {
   const t0 = Date.now(); let anyLive = false;
   try {
@@ -168,6 +200,7 @@ while (new Date() < stopAt) {
     if (!sb) errors.espn++;
     const events = sb?.events || [];
     const now = Date.now();
+    noteBoard(health, events.length, now);
     // live games; games within 30 min of kickoff; finished games from the last 12 hours seen once (so a restart keeps the day's finals on the page)
     const active = events.filter(e => { const st = e.status?.type?.state; const start = new Date(e.date).getTime(); return st === 'in' || (st === 'pre' && start - now < 30 * 60000 && start - now > -3 * 3600000) || (st === 'post' && now - start < 12 * 3600000 && !(games[e.id] && games[e.id].closed)); });
     anyLive = active.some(e => e.status?.type?.state === 'in');
@@ -193,7 +226,8 @@ while (new Date() < stopAt) {
     if (!anyLive && cycles % 10 === 0) log(`idle: ${events.length} events on the board, ${active.length} active`);
   } catch (e) { errors.cycle++; log('cycle error', e.message); }
   cycles++;
+  if (Date.now() - lastBeat >= BEAT_EVERY_MS) { lastBeat = Date.now(); await heartbeat(); } else checkHealth();
   const wait = Math.max(0, (anyLive ? POLL_MS : IDLE_MS) - (Date.now() - t0));
   await new Promise(r => setTimeout(r, wait));
 }
-log('stop time reached'); process.exit(0);
+log('stop time reached'); await heartbeat(); process.exit(0);
